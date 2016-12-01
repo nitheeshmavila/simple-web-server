@@ -1,10 +1,9 @@
 import socket
 import sys
 
-
 class WebServer:
 	
-	def __init__(self, port):
+	def __init__(self, port=8080):
 		self.port = port
 		self.directory = 'contents'
 		self.ipAddress = '127.0.0.1'
@@ -13,9 +12,14 @@ class WebServer:
 		self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
 			self.serverSocket.bind((self.ipAddress, self.port))
-			print("Starting HTTP Server in python on ",self.ipAddress,":", self.port)
+			greenColor = '\033[92m'
+			whiteColor = '\033[0m'
+			print(greenColor + "Starting up http-server, serving ./")
+			print("Available on\n http://127.0.0.1:%d"%self.port)
+			print("Hit CTRL-C to stop the server" + whiteColor)
 		except:
-			print("Port already in use")
+			self.port += 1
+			self.createSocket()
 		self.listen()
 
 	def listen(self):
@@ -25,11 +29,14 @@ class WebServer:
 			requestedData = connectionSocket.recv(1024)
 			requestedString = bytes.decode(requestedData)
 			requestedMethod = requestedString.split(' ')[0]
+			print(requestedMethod)
 			if(requestedMethod == 'GET'):
 				requestedFile = requestedString.split(' ')[1]				
+				print(requestedFile)
 				if(requestedFile == '/'):
 					requestedFile = '/index.html'
 				requestedFile = self.directory + requestedFile
+				print(requestedFile)
 				try:
 					fp = open(requestedFile, 'rb')
 					responseData = fp.read()
@@ -54,5 +61,5 @@ class WebServer:
 		return headr
 	
 
-new_server = WebServer(8033)
+new_server = WebServer()
 new_server.createSocket()
