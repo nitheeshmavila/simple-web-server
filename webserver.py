@@ -1,65 +1,87 @@
 import socket
 import sys
+import time
 
-class WebServer:
+class HttpServer:
 	
 	def __init__(self, port=8080):
 		self.port = port
-		self.directory = 'contents'
-		self.ipAddress = '127.0.0.1'
+		self.host_dir = '.' 
+		self.ip_address = '127.0.0.1'
 
-	def createSocket(self):
-		self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	def create_socket(self):
+		self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
-			self.serverSocket.bind((self.ipAddress, self.port))
-			greenColor = '\033[92m'
-			whiteColor = '\033[0m'
-			print(greenColor + "Starting up http-server, serving ./")
+			self.server.bind((self.ip_address, self.port))
+			green_color = '\033[92m'
+			white_color = '\033[0m'
+			print(green_color + "Starting up http-server, serving ./")
 			print("Available on\n http://127.0.0.1:%d"%self.port)
-			print("Hit CTRL-C to stop the server" + whiteColor)
+			print(white_color + "Hit CTRL-C to stop the server" + white_color)
 		except:
 			self.port += 1
-			self.createSocket()
+			self.create_socket()
 		self.listen()
 
 	def listen(self):
-		while(True):
-			self.serverSocket.listen(1)
-			connectionSocket, clientAddress =  self.serverSocket.accept()
-			requestedData = connectionSocket.recv(1024)
-			requestedString = bytes.decode(requestedData)
-			requestedMethod = requestedString.split(' ')[0]
-			print(requestedMethod)
-			if(requestedMethod == 'GET'):
-				requestedFile = requestedString.split(' ')[1]				
-				print(requestedFile)
-				if(requestedFile == '/'):
-					requestedFile = '/index.html'
-				requestedFile = self.directory + requestedFile
-				print(requestedFile)
+		while True:
+			print("Waiting for new connection\n")
+			self.server.listen(1)
+			conn_socket, address =  self.server.accept()
+			requested_data = conn_socket.recv(1024)
+			print("Recived connection from:",address)
+			requested_string = bytes.decode(requested_data)
+			requested_method = requested_string.split(' ')[0]
+			print("Request method:",requested_method)
+			print("Request content:\n",requested_string)
+			if(requested_method == 'GET'):
+				requested_file = requested_string.split(' ')[1]
+				if(requested_file == '/'):
+					requested_file = '/index.html'
+				requested_file = self.host_dir + requested_file
+				print("Requested File:",requested_file)
 				try:
-					fp = open(requestedFile, 'rb')
-					responseData = fp.read()
-					header = self.headers(200)
+					fp = open(requested_file)
+					response_data = fp.read()
 					fp.close()
+					print("response content:",response_data)
+					content_type = self.get_content_type(requested_file)
+					header = self.make_header(200, content_type)
 				except:
-					header = self.headers(400)
-					responseData = b"<html><body><p> Error 404 File not found</p></body></html>"	
-				finalResponse = header.encode()
-				finalResponse += responseData
-				connectionSocket.send(finalResponse)				  
-				connectionSocket.close()
+					header = self.make_header(400, 'text/html')
+					response_data = "<html><body><p> Error 404 File not found</p></body></html>"	
+				final_response = (header + response_data).encode()
+				print("Response:",final_response)
+				conn_socket.send(final_response)				  
+				conn_socket.close()
 			else:
-				print("HTTP request methode unknown")			
+				print(requested_method)
+				print("HTTP request method unknown")			
 			
-	def headers(self, httpCode):
+	def make_header(self, http_code, content_type):
 		headr = ''
-		if(httpCode == 200):
-			headr = 'HTTP/1.1 200 OK'
-		elif(httpCode == 404):
+		if(http_code == 200):
+			headr = 'HTTP/1.1 200 OK\n'
+		elif(http_code == 404):
 			headr = 'HTTP/1.1 404 File Not Found'
+		date = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
+		headr += 'Date:' + date + '\n'
+		headr += 'Server: Python-http-server\n'
+		headr += 'Content-Type:'+ content_type + '\n'
+		headr += '\n'
 		return headr
-	
 
-new_server = WebServer()
-new_server.createSocket()
+	def get_content_type(self, file_name):
+		content_types = {'html': 'text/html',
+						'txt': 'text/txt',
+						'jpg': 'image/jpeg',
+						'png': 'image/png',
+						'ico': 'icon/ico'}
+		return content_types[file_name.split('.')[-1]]
+			
+
+		
+new_server = HttpServer()
+new_server.create_socket()
+
+
