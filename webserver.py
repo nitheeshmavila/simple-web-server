@@ -33,24 +33,24 @@ class HttpServer:
 			requested_string = bytes.decode(requested_data)
 			requested_method = requested_string.split(' ')[0]
 			print("Request method:",requested_method)
-			print("Request content:\n",requested_string)
+	#		print("Request content:\n",requested_string)
 			if(requested_method == 'GET'):
 				requested_file = requested_string.split(' ')[1]
 				if(requested_file == '/'):
 					requested_file = '/index.html'
 				requested_file = self.host_dir + requested_file
-				print("Requested File:",requested_file)
 				try:
-					fp = open(requested_file)
+					fp = open(requested_file, 'rb')
 					response_data = fp.read()
 					fp.close()
-					print("response content:",response_data)
+		#			print("response content:",response_data)
 					content_type = self.get_content_type(requested_file)
 					header = self.make_header(200, content_type)
 				except:
 					header = self.make_header(400, 'text/html')
-					response_data = "<html><body><p> Error 404 File not found</p></body></html>"	
-				final_response = (header + response_data).encode()
+					response_data = "<html><body><p> Error 404 File not found</p></body></html>".encode()	
+				final_response = header.encode()
+				final_response += response_data
 				print("Response:",final_response)
 				conn_socket.send(final_response)				  
 				conn_socket.close()
@@ -63,7 +63,7 @@ class HttpServer:
 		if(http_code == 200):
 			headr = 'HTTP/1.1 200 OK\n'
 		elif(http_code == 404):
-			headr = 'HTTP/1.1 404 File Not Found'
+			headr = 'HTTP/1.1 404 File Not Found\n'
 		date = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
 		headr += 'Date:' + date + '\n'
 		headr += 'Server: Python-http-server\n'
